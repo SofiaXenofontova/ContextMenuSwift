@@ -12,57 +12,74 @@ open class ContextMenuCell: UITableViewCell {
     
     static let identifier = "ContextMenuCell"
 
-    @IBOutlet open weak var titleLabel: UILabel!
-    @IBOutlet open weak var iconImageView: UIImageView!
+    @IBOutlet open weak var label: UILabel!
+    @IBOutlet open weak var checkmark: UIImageView!
     
     weak var contextMenu: ContextMenu?
     weak var tableView: UITableView?
-    var item: ContextMenuItem!
+    var item: ContextMenuItemWithId!
     var style : ContextMenuConstants? = nil
+    
+    var leagueId : Int = 1
+   
     
     override open func awakeFromNib() {
         super.awakeFromNib()
-        // Initialization code
+   
     }
 
     override open func setSelected(_ selected: Bool, animated: Bool) {
+        
         super.setSelected(selected, animated: animated)
     }
     
-    override open func setHighlighted(_ highlighted: Bool, animated: Bool) {
-//        super.setHighlighted(highlighted, animated: animated)
-        
-        if highlighted {
-            self.contentView.backgroundColor = UIColor.lightGray.withAlphaComponent(0.3)
-        }else{
-            self.contentView.backgroundColor = .clear
-        }
-    }
+//    override open func setHighlighted(_ highlighted: Bool, animated: Bool) {
+////        super.setHighlighted(highlighted, animated: animated)
+//
+//        if highlighted {
+//            self.contentView.backgroundColor = UIColor.lightGray.withAlphaComponent(0.3)
+//        }else{
+//            self.contentView.backgroundColor = .clear
+//        }
+//    }
     
     override open func prepareForReuse() {
         super.prepareForReuse()
         
-        if let label = self.titleLabel {
+        if let label = self.label {
             label.text = nil
         }
-        if let imgView = self.iconImageView {
+        if let imgView = self.checkmark {
             imgView.image = nil
         }
         
     }
     
-    open func setup(){
-        if let label = self.titleLabel {
-            label.text = item.title
-            if let menuConstants = style {
-                label.textColor = menuConstants.LabelDefaultColor
-                label.font = menuConstants.LabelDefaultFont
-            }
+    open func configureCell(){
+       // self.imageView?.tintColor = checkMarkColor
+        self.label.text = self.item.title
+        
+        self.leagueId = self.item.id
+        if #available(iOS 13.0, *) {
+            self.checkmark.image = UIImage(systemName: "checkmark")
+        } else {
+            self.checkmark.image = UIImage(named: "checkmark")
         }
-        if let imgView = self.iconImageView {
-            imgView.image = item.image
-            imgView.isHidden = (item.image == nil)
-        }
+        self.checkmark.tintColor = UIColor(red: 0.776, green: 0.667, blue: 0.435, alpha: 1)
+        
+        self.label.font = self.leagueId == CM.leagueId ? UIFont(name: "CodecPro-Heavy", size: 22) : UIFont(name: "CodecPro-Bold", size: 22)
+        self.label.textColor = self.leagueId == CM.leagueId ? UIColor(red: 0.231, green: 0.494, blue: 0.341, alpha: 1) : .black
+        self.checkmark.alpha = self.leagueId == CM.leagueId ? 1 : 0
+        
+        
+        print("cell league id", self.leagueId, CM.leagueId )
+       // print("self.label.text", self.label.text)
+        
+        print( self.checkmark.alpha)
+        
+//
+//
+//
     }
     
 }

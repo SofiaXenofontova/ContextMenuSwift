@@ -15,21 +15,47 @@ public protocol ContextMenuItem {
     var image : UIImage? {
         get
     }
+    var id : Int {
+        get
+    }
 }
 
 extension ContextMenuItem {
     public var image: UIImage? {
         get { return nil }
     }
-}
-
-extension String : ContextMenuItem {
+    
     public var title: String {
         get {
             return "\(self)"
         }
     }
+    
+    public var id : Int {
+        get {
+            return self.id
+        }
+    }
 }
+
+public struct ContextMenuItemWithId : ContextMenuItem {
+    public var title: String
+    public var id: Int
+    
+    
+    public init(title: String, id : Int) {
+        self.title = title
+        self.id = id
+    }
+}
+
+//extension String : ContextMenuItem {
+//
+//}
+//
+//extension Int : ContextMenuItem {
+//
+//}
 public struct ContextMenuItemWithImage: ContextMenuItem {
     public var title: String
     public var image: UIImage?
@@ -40,9 +66,36 @@ public struct ContextMenuItemWithImage: ContextMenuItem {
     }
 }
 
+//extension UIView {
+//
+//    open func showMenu(wind: UIWindow, items: [ContextMenuItem], actionHandler: ((_ index: Int, _ item: ContextMenuItem) -> Bool)?){
+//        let cust = ContextMenu(viewTargeted: self, window: wind)
+//        cust.items = items
+//        cust.onItemTap = { index, item in
+//            (actionHandler?(index, item) ?? true)
+//        }
+//        cust.showMenu()
+//    }
+//
+//    open func showMenu(items: [ContextMenuItem], actionHandler: ((_ index: Int, _ item: ContextMenuItem) -> Bool)?){
+//        if let cust = ContextMenu(viewTargeted: self) {
+//            cust.items = items
+//            cust.onItemTap = { index, item in
+//                (actionHandler?(index, item) ?? true)
+//            }
+//            cust.showMenu()
+//        }
+//    }
+//
+////    open func getContextMenu(window: UIView? = nil) -> ContextMenu?{
+////        return ContextMenu(viewTargeted: self, window: window)
+////    }
+////
+//}
+
 public protocol ContextMenuDelegate : AnyObject {
-    func contextMenuDidSelect(_ contextMenu: ContextMenu, cell: ContextMenuCell, targetedView: UIView, didSelect item: ContextMenuItem, forRowAt index: Int) -> Bool
-    func contextMenuDidDeselect(_ contextMenu: ContextMenu, cell: ContextMenuCell, targetedView: UIView, didSelect item: ContextMenuItem, forRowAt index: Int)
+    func contextMenuDidSelect(_ contextMenu: ContextMenu, cell: ContextMenuCell, targetedView: UIView, didSelect item: ContextMenuItemWithId, forRowAt index: Int) -> Bool
+    func contextMenuDidDeselect(_ contextMenu: ContextMenu, cell: ContextMenuCell, targetedView: UIView, didSelect item: ContextMenuItemWithId, forRowAt index: Int)
     func contextMenuDidAppear(_ contextMenu: ContextMenu)
     func contextMenuDidDisappear(_ contextMenu: ContextMenu)
 }
@@ -54,21 +107,23 @@ extension ContextMenuDelegate {
 public var CM : ContextMenu = ContextMenu()
 
 public struct ContextMenuConstants {
-    public var MaxZoom : CGFloat = 1.1
-    public var MinZoom : CGFloat = 0.8
+    public var MaxZoom : CGFloat = 1.15
+    public var MinZoom : CGFloat = 0.6
     public var MenuDefaultHeight : CGFloat = 120
-    public var MenuWidth : CGFloat = 250
+    public var MenuWidth : CGFloat = 370
     public var MenuMarginSpace : CGFloat = 20
     public var TopMarginSpace : CGFloat = 40
     public var BottomMarginSpace : CGFloat = 24
     public var HorizontalMarginSpace : CGFloat = 20
-    public var ItemDefaultHeight : CGFloat = 44
+    public var ItemDefaultHeight : CGFloat = 60
+//    var headerDefaultHeight : CGFloat = 0
+//    var footerDefaultHeight : CGFloat = 0
     
     public var LabelDefaultFont : UIFont = .systemFont(ofSize: 14)
     public var LabelDefaultColor : UIColor = UIColor.black.withAlphaComponent(0.95)
     public var ItemDefaultColor : UIColor = UIColor.white.withAlphaComponent(0.95)
     
-    public var MenuCornerRadius : CGFloat = 12
+    public var MenuCornerRadius : CGFloat = 40
     public var BlurEffectEnabled : Bool = true
     public var BlurEffectDefault : UIBlurEffect = UIBlurEffect(style: .dark)
     public var BackgroundViewColor : UIColor = UIColor.black.withAlphaComponent(0.6)
@@ -87,11 +142,13 @@ open class ContextMenu: NSObject {
     open var nibView = UINib(nibName: ContextMenuCell.identifier, bundle: Bundle(for: ContextMenuCell.self))
     open var closeAnimation = true
     
-    open var onItemTap : ((_ index: Int, _ item: ContextMenuItem) -> Bool)?
+    open var onItemTap : ((_ index: Int, _ item: ContextMenuItemWithId) -> Bool)?
     open var onViewAppear : ((UIView) -> Void)?
     open var onViewDismiss : ((UIView) -> Void)?
     
-    open var items = [ContextMenuItem]()
+    open var items = [ContextMenuItemWithId]()
+    
+    open var leagueId : Int = 0
     
     // MARK:- Private Variables
     private weak var delegate : ContextMenuDelegate?
@@ -123,13 +180,13 @@ open class ContextMenu: NSObject {
     
     // MARK:- Init Functions
     public init(window: UIView? = nil) {
-        let wind = window ?? UIApplication.shared.windows.first ?? UIApplication.shared.windows.first(where: {$0.isKeyWindow})
+        let wind = window ?? UIApplication.shared.windows.first ?? UIApplication.shared.keyWindow
         self.customView = wind!
         self.mainViewRect = wind!.frame
     }
     
     init?(viewTargeted: UIView, window: UIView? = nil) {
-        if let wind = window ?? UIApplication.shared.windows.first ?? UIApplication.shared.windows.first(where: {$0.isKeyWindow}) {
+        if let wind = window ?? UIApplication.shared.windows.first ?? UIApplication.shared.keyWindow {
             self.customView = wind
             self.viewTargeted = viewTargeted
             self.mainViewRect = self.customView.frame
@@ -145,8 +202,29 @@ open class ContextMenu: NSObject {
     }
     
     deinit {
+//        removeTapInteraction()
         print("Deinit")
     }
+    
+//    open func addTapInteraction(){
+//        self.viewTargeted.isUserInteractionEnabled = true
+//        touchGesture = UITapGestureRecognizer(target: self, action: #selector(self.itemTapped(_:)))
+//        self.viewTargeted.addGestureRecognizer(touchGesture!)
+//    }
+//
+//    open func removeTapInteraction(){
+//        if let gesture = self.touchGesture {
+//            self.viewTargeted.removeGestureRecognizer(gesture)
+//            self.viewTargeted.isUserInteractionEnabled = false
+//            self.touchGesture = nil
+//        }
+//    }
+//
+//    @objc func itemTapped(_ sender: UITapGestureRecognizer? = nil){
+//        DispatchQueue.main.async {
+//            self.showMenu()
+//        }
+//    }
     
     // MARK:- Show, Change, Update Menu Functions
     open func showMenu(viewTargeted: UIView, delegate: ContextMenuDelegate, animated: Bool = true){
@@ -235,6 +313,8 @@ open class ContextMenu: NSObject {
         }
         
         blurEffectView.frame = CGRect(x: mainViewRect.origin.x, y: mainViewRect.origin.y, width: mainViewRect.width, height: mainViewRect.height)
+        //        blurEffectView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        //        blurEffectView.alpha = 0
         if closeGesture == nil {
             blurEffectView.isUserInteractionEnabled = true
             closeGesture = UITapGestureRecognizer(target: self, action: #selector(self.dismissViewAction(_:)))
@@ -310,11 +390,93 @@ open class ContextMenu: NSObject {
         tableView.allowsMultipleSelection = true
         tableView.backgroundColor = .clear
         tableView.reloadData()
+        
+//        let stackView = UIStackView()
+//        stackView.axis = .vertical
+//        tableView.addSubview(stackView)
+//        stackView.translatesAutoresizingMaskIntoConstraints = false
+//        stackView.topAnchor.constraint(equalTo: tableView.topAnchor).isActive = true
+//        stackView.bottomAnchor.constraint(equalTo: tableView.bottomAnchor).isActive = true
+//        stackView.leadingAnchor.constraint(equalTo: tableView.leadingAnchor).isActive = true
+//        stackView.trailingAnchor.constraint(equalTo: tableView.trailingAnchor).isActive = true
+//        stackView.widthAnchor.constraint(equalToConstant: MenuConstants.MenuWidth).isActive = true
+        
+//        if let placeHolder = self.placeHolderView {
+//            if items.isEmpty {
+//                stackView.addArrangedSubview(placeHolder)
+//                placeHolder.heightAnchor.constraint(equalToConstant: menuHeight).isActive = true
+//            }else{
+//                placeHolder.removeFromSuperview()
+//            }
+//        }
+            
+        
+        // MARK:- Previous Item Creation Work
+//        items.enumerated().forEach { (index, actionItem) in
+//            let btn = UIButton()
+//            stackView.addArrangedSubview(btn)
+//            btn.setTitle(actionItem.title, for: .normal)
+//            btn.setTitleColor(MenuConstants.LabelDefaultColor, for: .normal)
+//            btn.titleLabel?.textColor = MenuConstants.LabelDefaultColor
+//            if #available(iOS 11.0, *) {
+//                btn.contentHorizontalAlignment = .leading
+//            }
+//            //            btn.font = 14
+//            btn.titleLabel?.font = MenuConstants.LabelDefaultFont
+//            if let img = actionItem.image {
+//                let iconImageView = UIImageView(image: img)
+//                iconImageView.tag = 13
+//                btn.addSubview(iconImageView)
+//                iconImageView.contentMode = .scaleAspectFit
+//                iconImageView.translatesAutoresizingMaskIntoConstraints = false
+//                iconImageView.trailingAnchor.constraint(equalTo: btn.trailingAnchor, constant: -14).isActive = true
+//                iconImageView.heightAnchor.constraint(equalToConstant: 19).isActive = true
+//                iconImageView.widthAnchor.constraint(equalToConstant: 19).isActive = true
+//                iconImageView.centerYAnchor.constraint(equalTo: btn.centerYAnchor).isActive = true
+//                btn.contentEdgeInsets = UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 14 + 19 + 12)
+//            }else{
+//                btn.contentEdgeInsets = UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 16)
+//            }
+//            btn.actionHandler(controlEvents: .touchUpInside) { [weak self] in
+//                btn.backgroundColor = UIColor.clear
+//                if self?.onItemTap?(index, actionItem) ?? false {
+//                    self?.closeAllViews()
+//                }
+//                if let weakSelf = self {
+//                    if weakSelf.delegate?.contextMenu(weakSelf, targetedView: (self?.viewTargeted)!, didSelect: actionItem, forRowAt: index) ?? false {
+//                        weakSelf.closeAllViews()
+//                    }
+//                }else{
+//                    self?.closeAllViews()
+//                }
+//            }
+//            btn.translatesAutoresizingMaskIntoConstraints = false
+//            btn.heightAnchor.constraint(equalToConstant: MenuConstants.ItemDefaultHeight).isActive = true
+//            btn.actionHandler(controlEvents: .touchDown) {
+//                btn.backgroundColor = UIColor.lightGray.withAlphaComponent(0.2)
+//            }
+//            btn.actionHandler(controlEvents: .touchUpOutside) {
+//                btn.backgroundColor = .clear
+//            }
+//            //            btn.actionHandler(controlEvents: .touchCancel) {
+//            //                btn.backgroundColor = .clear
+//            //            }
+//
+//            if (items.count - 1) != index {
+//                let lineView = UIView()
+//                stackView.addArrangedSubview(lineView)
+//                lineView.translatesAutoresizingMaskIntoConstraints = false
+//                lineView.heightAnchor.constraint(equalToConstant: 1).isActive = true
+//                lineView.backgroundColor = UIColor.lightGray.withAlphaComponent(0.2)
+//            }
+//        }
+        
     }
     
     func openAllViews(animated: Bool = true){
         let rect = self.viewTargeted.convert(self.mainViewRect.origin, to: nil)
         viewTargeted.alpha = 0
+        //        customView.backgroundColor = .clear
         blurEffectView.alpha = 0
         closeButton.isUserInteractionEnabled = true
         targetedImageView.alpha = 1
@@ -344,6 +506,13 @@ open class ContextMenu: NSObject {
     func closeAllViews(){
         NotificationCenter.default.removeObserver(self, name: UIDevice.orientationDidChangeNotification, object: nil)
         DispatchQueue.main.async {
+            //            UIView.animate(withDuration: 0.2, animations: {
+            //                self.blurEffectView.alpha = 0
+            //                self.targetedImageView.layer.shadowOpacity = 0
+            //            }) { (_) in
+            //                self.viewTargeted.alpha = 1
+            //                self.customView.removeFromSuperview()
+            //            }
             self.targetedImageView.isUserInteractionEnabled = false
             self.menuView.isUserInteractionEnabled = false
             self.closeButton.isUserInteractionEnabled = false
@@ -352,6 +521,8 @@ open class ContextMenu: NSObject {
             if self.closeAnimation {
                 UIView.animate(withDuration: 0.3, delay: 0, usingSpringWithDamping: 0.8, initialSpringVelocity: 6, options: [.layoutSubviews, .preferredFramesPerSecond60, .allowUserInteraction], animations: {
                     self.prepareViewsForRemoveFromSuperView(with: rect)
+                    //                self.menuView.transform = CGAffineTransform.identity.scaledBy(x: 0, y: 0)//.translatedBy(x: 0, y: (self.menuHeight) * CGFloat((rect.y < self.menuView.frame.origin.y) ? -1 : 1) )
+                    
                 }) { (_) in
                     DispatchQueue.main.async {
                         self.removeAllViewsFromSuperView()
@@ -435,6 +606,18 @@ open class ContextMenu: NSObject {
         
         var zoomFactor = MenuConstants.MaxZoom
         
+//        let zoomFactorHorizontal = backgroundWidth/targetedImageFrame.width
+//        let zoomFactorVertical = backgroundHeight/targetedImageFrame.height
+//
+//        if zoomFactorHorizontal < zoomFactorVertical {
+//            zoomFactor = zoomFactorHorizontal
+//        }else{
+//            zoomFactor = zoomFactorVertical
+//        }
+//        if zoomFactor > MenuConstants.MaxZoom {
+//            zoomFactor = MenuConstants.MaxZoom
+//        }
+        
         var updatedWidth = targetedImageFrame.width // * zoomFactor
         var updatedHeight = targetedImageFrame.height // * zoomFactor
         
@@ -472,7 +655,7 @@ open class ContextMenu: NSObject {
                 zoomFactor = MenuConstants.MinZoom
             }
         }
-        
+
         updatedWidth = (updatedWidth * zoomFactor)
         updatedHeight = (updatedHeight * zoomFactor)
         
@@ -485,6 +668,16 @@ open class ContextMenu: NSObject {
     
     func fixTargetedImageViewExtrudings(){ // here I am checking for extruding part of ImageView
         
+//        let backgroundWidth = mainViewRect.width - (2 * MenuConstants.HorizontalMarginSpace)
+//        let backgroundHeight = mainViewRect.height - MenuConstants.TopMarginSpace - MenuConstants.BottomMarginSpace
+//
+//        if backgroundWidth > backgroundHeight {
+//
+//        }
+//        else{
+//
+//        }
+        
         if tvY > mainViewRect.height - MenuConstants.BottomMarginSpace - tvH {
             tvY = mainViewRect.height - MenuConstants.BottomMarginSpace - tvH
         }
@@ -494,11 +687,26 @@ open class ContextMenu: NSObject {
         
         if tvX < MenuConstants.HorizontalMarginSpace {
             tvX = MenuConstants.HorizontalMarginSpace
+//            mX = MenuConstants.HorizontalMarginSpace
         }
         else if tvX > mainViewRect.width - MenuConstants.HorizontalMarginSpace - tvW {
             tvX = mainViewRect.width - MenuConstants.HorizontalMarginSpace - tvW
+//            mX = mainViewRect.width - MenuConstants.HorizontalMarginSpace - mW
         }
+        
+//        if mY
     }
+    
+    
+    
+//    func fixHorizontalTargetedImageViewExtruding(){
+//
+//        let backgroundWidth = mainViewRect.width - (2 * MenuConstants.HorizontalMarginSpace)
+//        let backgroundHeight = mainViewRect.height - MenuConstants.TopMarginSpace - MenuConstants.BottomMarginSpace
+//
+//
+//
+//    }
     
     func updateHorizontalTargetedImageViewRect(){
         
@@ -609,6 +817,14 @@ open class ContextMenu: NSObject {
         
         self.fixTargetedImageViewExtrudings()
         
+//        else{
+//            if ((mainViewRect.width/2) - (mX + mW/2))/mainViewRect.width <= 0.5  {
+//                mX = mainViewRect.width/2 - mW/2
+//            }else{
+//                mX = MenuConstants.HorizontalMarginSpace
+//            }
+//        }
+        
         let backgroundWidth = mainViewRect.width - (2 * MenuConstants.HorizontalMarginSpace)
         let backgroundHeight = mainViewRect.height - MenuConstants.TopMarginSpace - MenuConstants.BottomMarginSpace
         
@@ -627,6 +843,7 @@ open class ContextMenu: NSObject {
     func updateTargetedImageViewPosition(animated: Bool = true){
         
         self.updateTargetedImageViewRect()
+        //        menuView.transform = CGAffineTransform.identity.scaledBy(x: 0, y: 0).translatedBy(x: 0, y: (menuHeight) * CGFloat((tvY < mY) ? -1 : 1) )
         
         if animated {
             UIView.animate(withDuration: 0.2,
@@ -635,10 +852,10 @@ open class ContextMenu: NSObject {
                            initialSpringVelocity: 6,
                            options: [.layoutSubviews, .preferredFramesPerSecond60, .allowUserInteraction],
                            animations:
-                            {  [weak self] in
-                
-                self?.updateTargetedImageViewPositionFrame()
-                
+                {  [weak self] in
+                    
+                    self?.updateTargetedImageViewPositionFrame()
+                    
             })
         }else{
             self.updateTargetedImageViewPositionFrame()
@@ -649,6 +866,7 @@ open class ContextMenu: NSObject {
         let weakSelf = self
         
         weakSelf.menuView.alpha = 1
+        //            self.menuView.transform = CGAffineTransform.identity.scaledBy(x: 1, y: 1) //.translatedBy(x: 0, y: 0)
         weakSelf.menuView.frame = CGRect(
             x: weakSelf.mX,
             y: weakSelf.mY,
@@ -681,16 +899,18 @@ open class ContextMenu: NSObject {
 extension ContextMenu : UITableViewDataSource, UITableViewDelegate {
     
     open func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        tableView.separatorEffect = .none
         return self.items.count
     }
     
     open func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+       
         let cell = tableView.dequeueReusableCell(withIdentifier: "ContextMenuCell", for: indexPath) as! ContextMenuCell
         cell.contextMenu = self
         cell.tableView = tableView
         cell.style = self.MenuConstants
         cell.item = self.items[indexPath.row]
-        cell.setup()
+        cell.configureCell()
         return cell
     }
     
