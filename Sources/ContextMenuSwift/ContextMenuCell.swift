@@ -20,29 +20,8 @@ open class ContextMenuCell: UITableViewCell {
     var item: ContextMenuItemWithId!
     var style : ContextMenuConstants? = nil
     
-    var leagueId : Int = 1
-   
-    
-    override open func awakeFromNib() {
-        super.awakeFromNib()
-   
-    }
+    var leagueId : Int = 0
 
-    override open func setSelected(_ selected: Bool, animated: Bool) {
-        
-        super.setSelected(selected, animated: animated)
-    }
-    
-//    override open func setHighlighted(_ highlighted: Bool, animated: Bool) {
-////        super.setHighlighted(highlighted, animated: animated)
-//
-//        if highlighted {
-//            self.contentView.backgroundColor = UIColor.lightGray.withAlphaComponent(0.3)
-//        }else{
-//            self.contentView.backgroundColor = .clear
-//        }
-//    }
-    
     override open func prepareForReuse() {
         super.prepareForReuse()
         
@@ -56,7 +35,8 @@ open class ContextMenuCell: UITableViewCell {
     }
     
     open func configureCell(){
-       // self.imageView?.tintColor = checkMarkColor
+     
+        
         self.label.text = self.item.title
         
         self.leagueId = self.item.id
@@ -71,15 +51,7 @@ open class ContextMenuCell: UITableViewCell {
         self.label.textColor = self.leagueId == CM.leagueId ? UIColor(red: 0.231, green: 0.494, blue: 0.341, alpha: 1) : .black
         self.checkmark.alpha = self.leagueId == CM.leagueId ? 1 : 0
         
-        
-        print("cell league id", self.leagueId, CM.leagueId )
-       // print("self.label.text", self.label.text)
-        
-        print( self.checkmark.alpha)
-        
-//
-//
-//
+
     }
     
 }
